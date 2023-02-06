@@ -1,1 +1,1 @@
-# go-_smtp_server
+# go_smtp_server
