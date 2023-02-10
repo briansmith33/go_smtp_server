@@ -10,7 +10,6 @@ import (
 	"encoding/base64"
 	"log"
 	"crypto/md5"
-	"crypto/sha256"
     "encoding/hex"
 	"crypto/rand"
 	"crypto/hmac"
@@ -268,14 +267,20 @@ func (s *SMTPServer) authenticateSession(conn net.Conn, is_tls bool, method stri
         }
 		credentials = string(data[:])
 		if (credentials == s.Password) {
-			fmt.Fprintf(conn, "235 2.7.0  Authentication Succeeded\r\n")
+			fmt.Fprintf(conn, "235 2.7.0 Authentication Succeeded\r\n")
 			return true
 		}
-		fmt.Fprintf(conn, "535 5.7.8  Authentication credentials invalid\r\n")
+		fmt.Fprintf(conn, "535 5.7.8 Authentication credentials invalid\r\n")
 		return false
 	}
 	if (method == "DIGEST-MD5") {
-		fmt.Fprintf(conn, "334 \r\n")
+		b := make([]byte, 16)
+    	_, err := rand.Read(b)
+		if err != nil {
+			fmt.Println(err)
+		}
+		nonce := base64.StdEncoding.EncodeToString([]byte(hex.EncodeToString(b[:])))
+		fmt.Fprintf(conn, "334 "+nonce+"\r\n")
 		credentials, err := bufio.NewReader(conn).ReadString('\n')
 		if err != nil {
 			fmt.Println(err)
@@ -286,12 +291,12 @@ func (s *SMTPServer) authenticateSession(conn net.Conn, is_tls bool, method stri
                 log.Fatal("error:", err)
         }
 		credentials = string(data[:])
-		hash := md5.Sum([]byte(s.Password))
+		hash := md5.Sum([]byte(s.Password+hex.EncodeToString(b[:])))
 		if (credentials == hex.EncodeToString(hash[:])) {
-			fmt.Fprintf(conn, "235 2.7.0  Authentication Succeeded\r\n")
+			fmt.Fprintf(conn, "235 2.7.0 Authentication Succeeded\r\n")
 			return true
 		}
-		fmt.Fprintf(conn, "535 5.7.8  Authentication credentials invalid\r\n")
+		fmt.Fprintf(conn, "535 5.7.8 Authentication credentials invalid\r\n")
 		return false
 	}
 	if (method == "CRAM-MD5") {
@@ -319,64 +324,10 @@ func (s *SMTPServer) authenticateSession(conn net.Conn, is_tls bool, method stri
 		sig := hmac.New(md5.New, key)
 		sig.Write([]byte(challenge))
 		if (credentials == hex.EncodeToString(sig.Sum(nil))) {
-			fmt.Fprintf(conn, "235 2.7.0  Authentication Succeeded\r\n")
+			fmt.Fprintf(conn, "235 2.7.0 Authentication Succeeded\r\n")
 			return true
 		}
-		fmt.Fprintf(conn, "535 5.7.8  Authentication credentials invalid\r\n")
-		return false
-	}
-	if (method == "DIGEST-SHA256") {
-		fmt.Fprintf(conn, "334 \r\n")
-		credentials, err := bufio.NewReader(conn).ReadString('\n')
-		if err != nil {
-			fmt.Println(err)
-		}
-		credentials = strings.Trim(credentials, "\r\n")
-		data, err := base64.StdEncoding.DecodeString(credentials)
-        if err != nil {
-                log.Fatal("error:", err)
-        }
-		credentials = string(data[:])
-
-		h := sha256.New()
-		h.Write([]byte(s.Password))
-
-		if (credentials == hex.EncodeToString(h.Sum(nil))) {
-			fmt.Fprintf(conn, "235 2.7.0  Authentication Succeeded\r\n")
-			return true
-		}
-		fmt.Fprintf(conn, "535 5.7.8  Authentication credentials invalid\r\n")
-		return false
-	}
-	if (method == "CRAM-SHA256") {
-		b := make([]byte, 32)
-    	_, err := rand.Read(b)
-		if err != nil {
-			fmt.Println(err)
-		}
-		challenge := base64.StdEncoding.EncodeToString([]byte(hex.EncodeToString(b[:])))
-		fmt.Fprintf(conn, "334 "+challenge+"\r\n")
-		credentials, err := bufio.NewReader(conn).ReadString('\n')
-		if err != nil {
-			fmt.Println(err)
-		}
-		credentials = strings.Trim(credentials, "\r\n")
-		data, err := base64.StdEncoding.DecodeString(credentials)
-        if err != nil {
-                log.Fatal("error:", err)
-        }
-		credentials = string(data[:])
-		secretHash := md5.New()
-		secretHash.Write([]byte(s.Password))
-		key := secretHash.Sum(nil)
-
-		sig := hmac.New(sha256.New, key)
-		sig.Write([]byte(challenge))
-		if (credentials == hex.EncodeToString(sig.Sum(nil))) {
-			fmt.Fprintf(conn, "235 2.7.0  Authentication Succeeded\r\n")
-			return true
-		}
-		fmt.Fprintf(conn, "535 5.7.8  Authentication credentials invalid\r\n")
+		fmt.Fprintf(conn, "535 5.7.8 Authentication credentials invalid\r\n")
 		return false
 	}
 	fmt.Fprintf(conn, "504 5.5.4 Unrecognized authentication type\r\n")
