@@ -365,13 +365,13 @@ func (s *SMTPServer) handleConnection(conn net.Conn) {
 			fqdn := msg[len("EHLO "):]
 			fmt.Fprintf(conn, "250-smtp2."+s.Domain+" EHLO "+fqdn+"\r\n")
 			if (is_tls) {
-				fmt.Fprintf(conn, "250-AUTH GSSAPI DIGEST-MD5 CRAM-MD5 DIGEST-SHA256 CRAM-SHA256 PLAIN\r\n")
+				fmt.Fprintf(conn, "250-AUTH GSSAPI DIGEST-MD5 CRAM-MD5 PLAIN\r\n")
 				debounce(s.DebounceNS)
 				fmt.Fprintf(conn, "250-SIZE "+strconv.Itoa(s.MaxMsgSize)+"\r\n")
 				debounce(s.DebounceNS)
 				fmt.Fprintf(conn, "250 HELP\r\n")
 			} else {
-				fmt.Fprintf(conn, "250-AUTH GSSAPI DIGEST-MD5 CRAM-MD5 DIGEST-SHA256 CRAM-SHA256\r\n")
+				fmt.Fprintf(conn, "250-AUTH GSSAPI DIGEST-MD5 CRAM-MD5\r\n")
 				debounce(s.DebounceNS)
 				fmt.Fprintf(conn, "250-SIZE "+strconv.Itoa(s.MaxMsgSize)+"\r\n")
 				debounce(s.DebounceNS)
@@ -383,13 +383,13 @@ func (s *SMTPServer) handleConnection(conn net.Conn) {
 		}
 		if (strings.HasPrefix(strings.ToUpper(msg), "HELP")) {
 			if (is_tls) {
-				fmt.Fprintf(conn, "250-AUTH GSSAPI DIGEST-MD5 CRAM-MD5 DIGEST-SHA256 CRAM-SHA256 PLAIN\r\n")
+				fmt.Fprintf(conn, "250-AUTH GSSAPI DIGEST-MD5 CRAM-MD5 PLAIN\r\n")
 				debounce(s.DebounceNS)
 				fmt.Fprintf(conn, "250-SIZE "+strconv.Itoa(s.MaxMsgSize)+"\r\n")
 				debounce(s.DebounceNS)
 				fmt.Fprintf(conn, "250 HELP\r\n")
 			} else {
-				fmt.Fprintf(conn, "250-AUTH GSSAPI DIGEST-MD5 CRAM-MD5 DIGEST-SHA256 CRAM-SHA256\r\n")
+				fmt.Fprintf(conn, "250-AUTH GSSAPI DIGEST-MD5 CRAM-MD5\r\n")
 				debounce(s.DebounceNS)
 				fmt.Fprintf(conn, "250-SIZE "+strconv.Itoa(s.MaxMsgSize)+"\r\n")
 				debounce(s.DebounceNS)
